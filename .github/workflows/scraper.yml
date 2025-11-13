@@ -31,5 +31,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4 python-telegram-bot
 
+      - name: List files (debug)
+        run: ls -R
+
       - name: Run notifier script
-        run: python volley_notifier.py
+        run: |
+          if [ -f "volley_notifier.py" ]; then
+            python volley_notifier.py
+          else
+            echo "File volley_notifier.py non trovato!"
+            exit 1
+          fi
