@@ -1,46 +1,34 @@
-name: VolleyCaslanoNotifier
+name: Test VolleyCaslanoNotifier
 
 on:
-  schedule:
-    # Esegui ogni 6 ore per controllare nuove partite
-    - cron: "0 */6 * * *"
-  workflow_dispatch: # Permette di avviare manualmente
-  push: # Esegui anche quando fai un nuovo commit
-    branches:
-      - main
+  workflow_dispatch:  # Avvio manuale per test
 
 jobs:
-  run-bot:
+  test-bot:
     runs-on: ubuntu-latest
-
-    env:
-      TELE_TOKEN: ${{ secrets.TELE_TOKEN }}
-      CHAT_ID: ${{ secrets.CHAT_ID }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          fetch-depth: 0  # Prende tutto il repository
 
-      - name: Install dependencies
+      - name: Show current directory
         run: |
-          python -m pip install --upgrade pip
-          pip install requests beautifulsoup4 python-telegram-bot
+          echo "Current directory: $(pwd)"
+          echo "Listing files in root:"
+          ls -l
 
-      - name: List files (debug)
-        run: ls -R ${{ github.workspace }}
-
-      - name: Run notifier script
-        working-directory: ${{ github.workspace }}
+      - name: Check recursively
         run: |
-          FILE="volley_notifier.py"
-          if [ -f "$FILE" ]; then
-            python "$FILE"
+          echo "Listing all files recursively:"
+          ls -R
+
+      - name: Test if volley_notifier.py exists
+        run: |
+          if [ -f "${{ github.workspace }}/volley_notifier.py" ]; then
+            echo "File volley_notifier.py trovato!"
           else
-            echo "File $FILE non trovato nella root del repository!"
+            echo "File volley_notifier.py NON trovato!"
             exit 1
           fi
