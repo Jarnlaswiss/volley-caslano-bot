@@ -1,4 +1,4 @@
-nname: VolleyCaslanoNotifier
+name: VolleyCaslanoNotifier
 
 on:
   schedule:
