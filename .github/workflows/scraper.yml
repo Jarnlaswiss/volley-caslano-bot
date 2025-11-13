@@ -1,34 +1,38 @@
-name: Test VolleyCaslanoNotifier
+name: VolleyCaslanoNotifier
 
 on:
-  workflow_dispatch:  # Avvio manuale per test
+  schedule:
+    # Esegui ogni 6 ore
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  test-bot:
+  run-bot:
     runs-on: ubuntu-latest
+
+    env:
+      TELE_TOKEN: ${{ secrets.TELE_TOKEN }}
+      CHAT_ID: ${{ secrets.CHAT_ID }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Prende tutto il repository
+          fetch-depth: 0  # Assicura che tutto il repo venga scaricato
 
-      - name: Show current directory
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Listing files in root:"
-          ls -l
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-      - name: Check recursively
+      - name: Install dependencies
         run: |
-          echo "Listing all files recursively:"
-          ls -R
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 python-telegram-bot
 
-      - name: Test if volley_notifier.py exists
-        run: |
-          if [ -f "${{ github.workspace }}/volley_notifier.py" ]; then
-            echo "File volley_notifier.py trovato!"
-          else
-            echo "File volley_notifier.py NON trovato!"
-            exit 1
-          fi
+      - name: Run notifier script
+        working-directory: ${{ github.workspace }}
+        run: python volley_notifier.py
