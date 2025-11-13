@@ -32,13 +32,15 @@ jobs:
           pip install requests beautifulsoup4 python-telegram-bot
 
       - name: List files (debug)
-        run: ls -R
+        run: ls -R ${{ github.workspace }}
 
       - name: Run notifier script
+        working-directory: ${{ github.workspace }}
         run: |
-          if [ -f "volley_notifier.py" ]; then
-            python volley_notifier.py
+          FILE="volley_notifier.py"
+          if [ -f "$FILE" ]; then
+            python "$FILE"
           else
-            echo "File volley_notifier.py non trovato!"
+            echo "File $FILE non trovato nella root del repository!"
             exit 1
           fi
