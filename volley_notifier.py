@@ -1,12 +1,13 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 import os
 import re
 
 from telegram import Bot, Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
+from zoneinfo import ZoneInfo  # per fuso orario di Zurigo
 
 # --------------------------
 # Configurazione
@@ -28,6 +29,13 @@ headers = {"User-Agent": "CaslanoNotifier/1.0 (+https://yourdomain.example)"}
 bot = Bot(token=TELE_TOKEN)
 
 # --------------------------
+# Funzioni per orario
+# --------------------------
+
+def now_zurich():
+    return datetime.now(tz=ZoneInfo("Europe/Zurich"))
+
+# --------------------------
 # Funzioni di notifica
 # --------------------------
 
@@ -35,7 +43,7 @@ def notify_text(text):
     bot.send_message(chat_id=CHAT_ID, text=text)
 
 def cmd_online(update: Update, context: CallbackContext):
-    update.message.reply_text("✅ Bot attivo — ora: " + datetime.utcnow().isoformat() + "Z")
+    update.message.reply_text("✅ Bot attivo — ora: " + now_zurich().isoformat())
 
 def setup_bot():
     updater = Updater(TELE_TOKEN)
@@ -74,9 +82,16 @@ def parse_matches(html):
     for i, line in enumerate(lines):
         if re.search(r"\b" + re.escape(TEAM_KEYWORD) + r"\b", line, re.I):
             window = " ".join(lines[max(0,i-5):i+6])
+
+            # data
             date_match = re.search(r"(\d{1,2}[./]\d{1,2}[./]\d{2,4})|(\d{4}-\d{2}-\d{2})|(\d{1,2}\s+\w+\s+\d{4})", window)
             date_str = date_match.group(0) if date_match else None
 
+            # orario
+            time_match = re.search(r"\b([01]?\d|2[0-3]):([0-5]\d)\b", window)
+            time_str = time_match.group(0) if time_match else None
+
+            # squadre
             vs_match = re.search(r"([A-Za-zÀ-ÖØ-öø-ÿ0-9 '\-\.]+)\s*(?:-|–|—|vs\.?|v\.)\s*([A-Za-zÀ-ÖØ-öø-ÿ0-9 '\-\.]+)", window, re.I)
             home, away = None, None
             if vs_match:
@@ -88,17 +103,20 @@ def parse_matches(html):
                 else:
                     home, away = a, b
 
+            # punteggi set
             set_scores = re.findall(r"(\d{1,2})\s*[-:]\s*(\d{1,2})", window)
             set_scores = [(int(x), int(y)) for x,y in set_scores] if set_scores else []
 
             matches.append({
                 "context_line": line,
                 "date_raw": date_str,
+                "time_raw": time_str,
                 "home": home,
                 "away": away,
                 "set_scores": set_scores,
-                "scraped_at": datetime.utcnow().isoformat() + "Z"
+                "scraped_at": now_zurich().isoformat()
             })
+
     return matches
 
 def parse_date(date_raw):
@@ -106,7 +124,7 @@ def parse_date(date_raw):
         return None
     for fmt in ("%d.%m.%Y","%d.%m.%y","%Y-%m-%d","%d %B %Y","%d %b %Y"):
         try:
-            return datetime.strptime(date_raw, fmt)
+            return datetime.strptime(date_raw, fmt).replace(tzinfo=ZoneInfo("Europe/Zurich"))
         except Exception:
             pass
     return None
@@ -119,7 +137,7 @@ def run_scrape():
     state = load_state()
     html = fetch_page(URL)
     matches = parse_matches(html)
-    now = datetime.utcnow()
+    now = now_zurich()
 
     for m in matches:
         dt = parse_date(m.get("date_raw"))
@@ -131,7 +149,8 @@ def run_scrape():
         if dt:
             days_until = (dt - now).days
             if 0 <= days_until <= 2 and not state["matches"][key].get("notified"):
-                notify_text(f"In {days_until} giorni: {m.get('home')} vs {m.get('away')} il {m.get('date_raw')}")
+                time_display = f" alle {m['time_raw']}" if m['time_raw'] else ""
+                notify_text(f"In {days_until} giorni: {m.get('home')} vs {m.get('away')} il {m.get('date_raw')}{time_display}")
                 state["matches"][key]["notified"] = True
 
         # report dei risultati
