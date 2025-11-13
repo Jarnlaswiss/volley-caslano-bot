@@ -17,7 +17,7 @@ jobs:
       - name: Install dependencies
         run: pip install requests beautifulsoup4 python-telegram-bot
       - name: Run script
-        env:
-          TELE_TOKEN: ${{8411045532:AAFZOc2czpmU1yOdW739Vvd6BeUjT0vlVm0}}
-          CHAT_ID: ${{ 7928474748 }}
-        run: python volley_alerts.py
+      env:
+            TELE_TOKEN: ${{ secrets.TELE_TOKEN }}
+            CHAT_ID: ${{ secrets.CHAT_ID }}
+  run: python volley_alerts.py
